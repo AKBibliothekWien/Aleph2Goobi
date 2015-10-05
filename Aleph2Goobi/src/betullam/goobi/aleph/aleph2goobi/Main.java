@@ -19,14 +19,18 @@ public class Main {
 		
 	public static void main(String[] args) {
 		
-		String vorgangId = args[0];
+		// args[0] should be {metaFile}
+		
+		String metaFilename = args[0];
+		String metaFileDir = new File(metaFilename).getParent();
+		System.out.println(metaFileDir);
 
-		String catalogId = getCatalogId(vorgangId);
+		String catalogId = getCatalogId(metaFilename);
 
 		List<GoobiField> goobiFieldsToAdd = new ArrayList<GoobiField>();
 
 		// Get rules from ruleset.xml
-		Ruleset ruleset = new Ruleset("../metadata/"+vorgangId);
+		Ruleset ruleset = new Ruleset(metaFileDir);
 		List<Rule> rules = ruleset.getRules();
 
 		// Get info about Aleph server and database:
@@ -45,23 +49,22 @@ public class Main {
 		}
 
 		// Write the info we received from the aleph record to meta.xml
-		new WriteToFile(goobiFieldsToAdd, "../metadata/"+vorgangId);
+		new WriteToFile(goobiFieldsToAdd, metaFileDir);
 
 	}
 
 	
-	private static String getCatalogId(String vorgangId) {
+	private static String getCatalogId(String metaFilename) {
 		String catalogId = null;
 
-		String fileName = "../metadata/"+vorgangId+"/meta.xml";
-		File rulesetFile = new File(fileName);
+		File metaFile = new File(metaFilename);
 
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db;
 
 		try {
 			db = dbf.newDocumentBuilder();
-			Document document = db.parse(rulesetFile);
+			Document document = db.parse(metaFile);
 
 			XmlParser xmlParser = new XmlParser();
 			catalogId = xmlParser.getTextValue(document, "//metadata[@name='CatalogIDDigital' and not(contains(@anchorId, 'true'))]");
