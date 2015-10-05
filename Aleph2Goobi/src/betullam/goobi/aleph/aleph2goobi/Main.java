@@ -15,22 +15,28 @@ import org.xml.sax.SAXException;
 
 import betullam.xmlhelper.XmlParser;
 
+// TODO: Add support for definition of projects in ruleset
+// TODO: Check for exact duplicate entries in meta.xml and meta_anchor.xml
+// TODO: Add some success or error messages for usability reasons
+
+
 public class Main {
 		
 	public static void main(String[] args) {
 		
 		// args[0] should be {metaFile}
+		// args[1] should be {prefs}
 		
 		String metaFilename = args[0];
 		String metaFileDir = new File(metaFilename).getParent();
-		System.out.println(metaFileDir);
+		String rulesetFilename = args[1];
 
 		String catalogId = getCatalogId(metaFilename);
 
 		List<GoobiField> goobiFieldsToAdd = new ArrayList<GoobiField>();
 
 		// Get rules from ruleset.xml
-		Ruleset ruleset = new Ruleset(metaFileDir);
+		Ruleset ruleset = new Ruleset(metaFileDir, rulesetFilename);
 		List<Rule> rules = ruleset.getRules();
 
 		// Get info about Aleph server and database:

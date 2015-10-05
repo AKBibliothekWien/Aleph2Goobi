@@ -27,16 +27,18 @@ public class Ruleset {
 
 	private XmlParser xmlParser = new XmlParser();
 	private Document rulesetDoc = null;
+	private String rulesetFilePath = null;
 	private String metaFilePath = null;
+	
 
-	protected Ruleset(String metaFilePath) {
+	protected Ruleset(String metaFilePath, String rulesetFilePath) {
 		this.metaFilePath = metaFilePath;
+		this.rulesetFilePath = rulesetFilePath;
 		this.setRulesetDoc();
 	}
 
 	private void setRulesetDoc() {
-		String fileName = "../rulesets/ruleset.xml";
-		File rulesetFile = new File(fileName);
+		File rulesetFile = new File(this.rulesetFilePath);
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db;
 
