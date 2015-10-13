@@ -6,6 +6,7 @@ import java.util.List;
 public class Rule {
 	private String type = null;
 	String scope = null;
+	String docstrcttype = null;
 	private List<String> mabFields = new ArrayList<String>();
 	private String goobiField = null;
 	private String condSubfield = null;
@@ -15,9 +16,10 @@ public class Rule {
 	String regex = null;
 	
 	
-	public Rule(String type, String scope, List<String> mabFields, String goobiField, String condSubfield, String condContains, String condContainsNot, boolean condMissing, String regex) {
+	public Rule(String type, String scope, String docstrcttype, List<String> mabFields, String goobiField, String condSubfield, String condContains, String condContainsNot, boolean condMissing, String regex) {
 		this.type = type;
 		this.scope = scope;
+		this.docstrcttype = docstrcttype;
 		this.mabFields = mabFields;
 		this.goobiField = goobiField;
 		this.condSubfield = condSubfield;
@@ -39,6 +41,12 @@ public class Rule {
 	}
 	public void setScope(String scope) {
 		this.scope = scope;
+	}
+	public String getDocstrcttype() {
+		return docstrcttype;
+	}
+	public void setDocstrcttype(String docstrcttype) {
+		this.docstrcttype = docstrcttype;
 	}
 	public List<String> getMabFields() {
 		return mabFields;
@@ -83,15 +91,11 @@ public class Rule {
 		this.regex = regex;
 	}
 
-	
 	@Override
 	public String toString() {
-		return "Rule [type=" + type + ", scope=" + scope + ", mabFields=" + mabFields + ", goobiField=" + goobiField
-				+ ", condSubfield=" + condSubfield + ", condContains=" + condContains + ", condContainsNot="
-				+ condContainsNot + ", condMissing=" + condMissing + ", regex=" + regex + "]";
+		return "Rule [type=" + type + ", scope=" + scope + ", docstrcttype=" + docstrcttype + ", mabFields=" + mabFields
+				+ ", goobiField=" + goobiField + ", condSubfield=" + condSubfield + ", condContains=" + condContains
+				+ ", condContainsNot=" + condContainsNot + ", condMissing=" + condMissing + ", regex=" + regex + "]";
 	}
 
-	
-
-	
 }

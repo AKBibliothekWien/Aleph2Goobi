@@ -27,7 +27,7 @@ public class FieldMatcher {
 	public List<String> getXmlToAdd() {
 		return this.xmlToAdd;
 	}
-	
+
 	public List<GoobiField> getGoobiFieldsToAdd() {
 		return this.goobiFieldsToAdd;
 	}
@@ -38,6 +38,7 @@ public class FieldMatcher {
 		String ruleGoobiFieldName = (rule.getGoobiField() != null && !rule.getGoobiField().isEmpty()) ? rule.getGoobiField() : null;
 		String ruleType = (rule.getType() != null && !rule.getType().isEmpty()) ? rule.getType() : null;
 		String ruleScope = (rule.getScope() != null && !rule.getScope().isEmpty()) ? rule.getScope() : null;
+		//String ruleTargetDocstrcttype = (rule.getDocstrcttype() != null && !rule.getDocstrcttype().isEmpty()) ? rule.getDocstrcttype() : null;
 		List<String> ruleMabFields = (rule.getMabFields() != null && !rule.getMabFields().isEmpty()) ? rule.getMabFields() : null;
 		String ruleCondField = (rule.getCondSubfield() != null && !rule.getCondSubfield().isEmpty()) ? rule.getCondSubfield() : null;
 		boolean hasRuleCondField = (ruleCondField != null) ? true : false;
@@ -45,10 +46,10 @@ public class FieldMatcher {
 		String ruleCondContainsNotValue = (rule.getCondContainsNot() != null && !rule.getCondContainsNot().isEmpty()) ? rule.getCondContainsNot() : null;
 		boolean ruleCondMissing = (rule.isCondMissing() == true) ? true : false;
 		String ruleRegex = (rule.getRegex() != null && !rule.getRegex().isEmpty()) ? rule.getRegex() : null;
-		
+
 
 		for (String mfRule : ruleMabFields) {
-
+			//System.out.println("ruleDocstrcttype: " + ruleDocstrcttype);
 			if (ruleType.equals("person")) {
 
 				for (MabField mfAleph : this.alephRecord) {
@@ -86,43 +87,46 @@ public class FieldMatcher {
 							boolean isGnd = (mfAleph.getSubfields().get("p") != null) ? true : false;
 
 							if (isGnd) {
-								name = (mfAleph.getSubfields().get("p") != null && !mfAleph.getSubfields().get("p").isEmpty())? mfAleph.getSubfields().get("p") : null;
+								name = (mfAleph.getSubfields().get("p") != null && !mfAleph.getSubfields().get("p").isEmpty()) ? mfAleph.getSubfields().get("p") : null;
 								gndId = (mfAleph.getSubfields().get("9") != null && !mfAleph.getSubfields().get("9").isEmpty()) ? mfAleph.getSubfields().get("9").replaceFirst("\\(.*?\\)", "") : null;
 							} else {
-								name = mfAleph.getSubfields().get("a");
+								name = (mfAleph.getSubfields().get("a") != null && !mfAleph.getSubfields().get("a").isEmpty()) ? mfAleph.getSubfields().get("a") : null;
 							}
 
-							if (name.contains(",")) {
-								int separatorIndex = name.indexOf(",");
-								firstName = (separatorIndex != -1) ? name.substring(separatorIndex + 1).trim() : null;
-								lastName = (separatorIndex != -1) ? name.substring(0, separatorIndex).trim() : null;
-							} else {
-								lastName = name;
-							}
-							
-							Map<String, String> valueMap = new HashMap<String, String>();
-							valueMap.put("lastName", lastName);
-							valueMap.put("firstName", firstName);
-							valueMap.put("authorityID", "gnd");
-							valueMap.put("authorityURI", "http://d-nb.info/gnd/");
-							valueMap.put("authorityValue", gndId);
-							valueMap.put("displayName", name);
+							if (name != null) {
+								if (name.contains(",")) {
+									int separatorIndex = name.indexOf(",");
+									firstName = (separatorIndex != -1) ? name.substring(separatorIndex + 1).trim() : null;
+									lastName = (separatorIndex != -1) ? name.substring(0, separatorIndex).trim() : null;
+								} else {
+									lastName = name;
+								}
 
-							GoobiField goobiField = new GoobiField(ruleGoobiFieldName, "person", ruleScope, valueMap);
-							goobiFieldsToAdd.add(goobiField);
+								Map<String, String> valueMap = new HashMap<String, String>();
+								valueMap.put("lastName", lastName);
+								valueMap.put("firstName", firstName);
+								valueMap.put("authorityID", "gnd");
+								valueMap.put("authorityURI", "http://d-nb.info/gnd/");
+								valueMap.put("authorityValue", gndId);
+								valueMap.put("displayName", name);
+
+								GoobiField goobiField = new GoobiField(ruleGoobiFieldName, "person", ruleScope, valueMap);
+								goobiFieldsToAdd.add(goobiField);
+							}
 						}
 					}
 				}
 
 			} else if (rule.getType().equals("default")) {
-
+				
 				for (MabField mfAleph : this.alephRecord) {
 
 					boolean matchesCondition = false;
 					String alephCondValue = (mfAleph.getSubfields().get(ruleCondField) != null && !mfAleph.getSubfields().get(ruleCondField).isEmpty()) ? mfAleph.getSubfields().get(ruleCondField) : "missing";
 
-					if (hasRuleCondField) { // A condition is defined in ruleset: go on and find out which one 
-
+					
+					if (hasRuleCondField) { // A condition is defined in ruleset: go on and find out which one 						
+						
 						if (!alephCondValue.equals("missing")) {
 							if (ruleCondContainsValue != null) {
 								matchesCondition = (alephCondValue.contains(ruleCondContainsValue)) ? true : false;
@@ -187,6 +191,7 @@ public class FieldMatcher {
 									subfieldValue = subfield.getValue();
 								}
 							}
+							
 
 							if (subfieldValue != null) {
 								Map<String, String> valueMap = new HashMap<String, String>();
@@ -204,7 +209,7 @@ public class FieldMatcher {
 		}
 	}
 
-	
+
 	private String getRegexedValue(String value, String regex) {
 		if (regex != null) {
 			Pattern pattern = Pattern.compile(regex);
@@ -216,7 +221,7 @@ public class FieldMatcher {
 		return value;
 	}
 
-	
+
 
 	private boolean containsAny(String value, List<String> list) {
 		boolean containsAny = false;

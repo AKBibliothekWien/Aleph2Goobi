@@ -74,6 +74,16 @@ public class Ruleset {
 		}
 		return database;
 	}
+	
+	public String getIdRegex() {
+		String idRegex = null;
+		try {
+			idRegex = xmlParser.getAttributeValue(this.rulesetDoc, "/Preferences/Aleph", "idregex");
+		} catch (XPathExpressionException e) {
+			e.printStackTrace();
+		}
+		return idRegex;
+	}
 
 
 	public List<Rule> getRules() {
@@ -106,6 +116,7 @@ public class Ruleset {
 
 							String type = (mapElement.hasAttribute("type")) ? mapElement.getAttribute("type") : "default";
 							String scope = (mapElement.hasAttribute("scope")) ? mapElement.getAttribute("scope") : null;
+							String targetDocstrct = (mapElement.hasAttribute("docstrcttype")) ? mapElement.getAttribute("docstrcttype") : null;
 
 							String mabFields = null;
 							List<String> lstMabFields = null;
@@ -154,9 +165,22 @@ public class Ruleset {
 
 
 							// Add rule to the list of rules, but only if the metadata field is officially defined in MetadataType section of ruleset.xml
-							// and if it is an allowed metadata of the parent DocStrctType:							
-							if (goobiFieldExists(this.rulesetDoc, goobiField) && goobiFieldAllowedInParent(this.rulesetDoc, goobiField, getParentDocStruct(scope))) {
-								rules.add(new Rule(type, scope, lstMabFields, goobiField, condSubfield, condContains, condContainsNot, condMissing, regex));
+							// and if it is an allowed metadata of the parent DocStrctType:
+							String realDocstrct = getParentDocStruct(scope);
+							
+							//System.out.println("targetDocstrct: " + targetDocstrct + "; realDocstrct: " + realDocstrct);
+							List<String> targetDocstrcts = (targetDocstrct != null) ? Arrays.asList(targetDocstrct.split("\\s*,\\s*")): null;
+							boolean matchingDocstrcts = false;
+							if (targetDocstrcts != null) {
+								matchingDocstrcts = targetDocstrcts.contains(realDocstrct);
+								//System.out.println(targetDocstrct + " contains " + realDocstrct + ": " + matchingDocstrcts);
+							} else {
+								matchingDocstrcts = true;
+								//System.out.println("targetDocstrct is " + targetDocstrct + " (" + matchingDocstrcts + ")");
+							}
+							
+							if (goobiFieldExists(this.rulesetDoc, goobiField) && goobiFieldAllowedInParent(this.rulesetDoc, goobiField, realDocstrct) && matchingDocstrcts) {
+								rules.add(new Rule(type, scope, targetDocstrct, lstMabFields, goobiField, condSubfield, condContains, condContainsNot, condMissing, regex));
 							}
 						}
 					}

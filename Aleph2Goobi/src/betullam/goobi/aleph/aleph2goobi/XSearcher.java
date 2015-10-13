@@ -80,6 +80,8 @@ public class XSearcher {
 			docAlephRecord = xServerRequest("https://aleph22-prod-sh2.obvsg.at", requestParameter);
 			alephRecord = alephRecord2Map(docAlephRecord);
 		}
+		
+		alephRecord = (!alephRecord.isEmpty()) ?  alephRecord : null;
 
 		return alephRecord;	
 	}
@@ -124,7 +126,7 @@ public class XSearcher {
 
 								subfieldLabel = (subfieldElement.getAttribute("label") != null) ? subfieldElement.getAttribute("label") : "*";
 								
-								// If we have classification fields (902, 907, ...) and  an additional value is given besides the main classification value,
+								// If we have classification fields (902, 907, ...) and an additional value is given besides the main classification value,
 								// we need to concatenate the main and the addidional value. E. g. for the following structure, we need to build "Frankreich, Nord":
 								//
 								//	<varfield id="902" i1=" " i2=" ">
