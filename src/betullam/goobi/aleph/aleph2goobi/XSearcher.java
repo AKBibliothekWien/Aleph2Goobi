@@ -100,6 +100,9 @@ public class XSearcher {
 
 			// Check if we have a node. If we have a search match in aleph xserver-serach, there should be a "/present/record/metadata/oai_marc" node:
 			if (varfieldNodes.getLength() > 0) {
+				
+				String prevSubfieldLabel = null; // For additional values in classification fields
+				
 				for (int i = 0; i < varfieldNodes.getLength(); i++) {
 					
 					Element varfieldElement = (Element)varfieldNodes.item(i);
@@ -139,15 +142,20 @@ public class XSearcher {
 								
 								boolean isClassification = false;
 								List<String> classificationFields = Arrays.asList("902", "907", "912", "917", "922", "927", "932", "937", "942", "947");
+								//List<String> additionalSubfields = Arrays.asList("b", "n", "c", "h", "d", "x", "z");
+
 								if (classificationFields.contains(varfieldId)) {
-									isClassification = true;									
+									isClassification = true;
 								}
 								
 								if (isClassification) {
+									
 									if (subfieldCounter == 1 && !subfieldLabel.equals("9")) {
 										subfieldContent = (!subfieldElement.getTextContent().isEmpty()) ? subfieldElement.getTextContent() : null;
+										prevSubfieldLabel = subfieldLabel;
 									} else if (subfieldCounter == 2  && !subfieldLabel.equals("9")) {
 										subfieldContent += (!subfieldElement.getTextContent().isEmpty()) ? ", " + subfieldElement.getTextContent() : null;
+										subfieldLabel = prevSubfieldLabel; // Use subfield label from previous (first) subfield. If not, we will match against the wrong subfield.
 									} else {
 										subfieldContent = (!subfieldElement.getTextContent().isEmpty()) ? subfieldElement.getTextContent() : null;
 									}

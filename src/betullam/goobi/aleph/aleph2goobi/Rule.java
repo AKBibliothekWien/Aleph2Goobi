@@ -7,6 +7,7 @@ public class Rule {
 	private String type = null;
 	String scope = null;
 	String docstrcttype = null;
+	List<String> dmdLogIds = null;
 	private List<String> mabFields = new ArrayList<String>();
 	private String goobiField = null;
 	private String condSubfield = null;
@@ -16,10 +17,11 @@ public class Rule {
 	String regex = null;
 	
 	
-	public Rule(String type, String scope, String docstrcttype, List<String> mabFields, String goobiField, String condSubfield, String condContains, String condContainsNot, boolean condMissing, String regex) {
+	public Rule(String type, String scope, String docstrcttype, List<String> dmdLogIds, List<String> mabFields, String goobiField, String condSubfield, String condContains, String condContainsNot, boolean condMissing, String regex) {
 		this.type = type;
 		this.scope = scope;
 		this.docstrcttype = docstrcttype;
+		this.dmdLogIds = dmdLogIds;
 		this.mabFields = mabFields;
 		this.goobiField = goobiField;
 		this.condSubfield = condSubfield;
@@ -47,6 +49,12 @@ public class Rule {
 	}
 	public void setDocstrcttype(String docstrcttype) {
 		this.docstrcttype = docstrcttype;
+	}
+	public List<String> getDmdLogIds() {
+		return dmdLogIds;
+	}
+	public void setDmdLogIds(List<String> dmdLogIds) {
+		this.dmdLogIds = dmdLogIds;
 	}
 	public List<String> getMabFields() {
 		return mabFields;
@@ -93,7 +101,7 @@ public class Rule {
 
 	@Override
 	public String toString() {
-		return "Rule [type=" + type + ", scope=" + scope + ", docstrcttype=" + docstrcttype + ", mabFields=" + mabFields
+		return "Rule [type=" + type + ", scope=" + scope + ", docstrcttype=" + docstrcttype + ", dmdLogId=" + dmdLogIds + ", mabFields=" + mabFields
 				+ ", goobiField=" + goobiField + ", condSubfield=" + condSubfield + ", condContains=" + condContains
 				+ ", condContainsNot=" + condContainsNot + ", condMissing=" + condMissing + ", regex=" + regex + "]";
 	}

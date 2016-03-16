@@ -3,8 +3,10 @@ package betullam.goobi.aleph.aleph2goobi;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -31,22 +33,22 @@ import org.xml.sax.SAXException;
 
 public class WriteToFile {
 
-	List<GoobiField> goobiFieldsToWrite = new ArrayList<GoobiField>();
+	Set<GoobiField> goobiFieldsToWrite = new HashSet<GoobiField>();
 	String metaFilePath;
 
-	public WriteToFile(List<GoobiField> goobiFieldsToWrite, String metaFilePath) {
+	public WriteToFile(Set<GoobiField> goobiFieldsToWrite, String metaFilePath) {
 		this.goobiFieldsToWrite = goobiFieldsToWrite;
 		this.metaFilePath = metaFilePath;
 		this.writeToMeta();
 	}
 
-	
+
 	private void writeToMeta() {
 
 		DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder documentBuilder;
 		Document document = null;
-		Element goobi = null;
+		List<Element> goobiElements = null;
 
 		try {
 
@@ -55,60 +57,66 @@ public class WriteToFile {
 
 			documentBuilder = documentBuilderFactory.newDocumentBuilder();
 
-			// Get goobi:goobi from meta.xml
-			String metaFilename = this.metaFilePath + "/meta.xml";
-			Document documentMeta = null;
-			Element goobiMeta = null;
-			if (fileExists(metaFilename)) {
-				documentMeta = documentBuilder.parse(metaFilename);
-				goobiMeta = getElementForInsertion(documentMeta);
-			}
-
-			// Get goobi:goobi from meta_anchor.xml
-			String metaAnchorFilename = this.metaFilePath + "/meta_anchor.xml";
-			Document documentMetaAnchor = null;
-			Element goobiMetaAnchor = null;
-			if (fileExists(metaAnchorFilename)) {
-				documentMetaAnchor = documentBuilder.parse(metaAnchorFilename);
-				goobiMetaAnchor = getElementForInsertion(documentMetaAnchor);
-			}
-
-
 			for (GoobiField goobiField : this.goobiFieldsToWrite) {
+
+				// Get goobi:goobi from meta.xml
+				String metaFilename = this.metaFilePath + "/meta.xml";
+				Document documentMeta = null;
+				List<Element> goobiMeta = null;
+				if (fileExists(metaFilename)) {
+					documentMeta = documentBuilder.parse(metaFilename);
+					goobiMeta = getElementsForInsertion(documentMeta, goobiField.getDmdLogIds());
+				}
+
+				// Get goobi:goobi from meta_anchor.xml
+				String metaAnchorFilename = this.metaFilePath + "/meta_anchor.xml";
+				Document documentMetaAnchor = null;
+				List<Element> goobiMetaAnchor = null;
+				if (fileExists(metaAnchorFilename)) {
+					documentMetaAnchor = documentBuilder.parse(metaAnchorFilename);
+					goobiMetaAnchor = getElementsForInsertion(documentMetaAnchor, goobiField.getDmdLogIds());
+				} else {
+					// Fallback, e. g. if "topstruct" is used for a Monograph
+					// Attention: Could cause problems if we have a Journal but are missing the meta_anchor.xml file!
+					metaAnchorFilename = metaFilename;
+					documentMetaAnchor = documentMeta;
+					goobiMetaAnchor = goobiMeta;
+				}
+
 
 				String fieldType = goobiField.getType();
 				String scope = goobiField.getScope();
 				Map<String, String> values = goobiField.getValues();
 				document = null;
-				goobi = null;
+				goobiElements = null;
 				String fileName = null;
 
 				if (scope != null) {
 					if (scope.equals("topstruct")) {
 						document = documentMetaAnchor;
-						goobi = goobiMetaAnchor;
+						goobiElements = goobiMetaAnchor;
 						fileName = metaAnchorFilename;
-						//System.out.println("Write to: anchor - scope not null");
+						//System.out.println("Write to: anchor - scope not null. File name: " + fileName);
 					} else if (scope.equals("firstchild")) {
 						document = documentMeta;
-						goobi = goobiMeta;
+						goobiElements = goobiMeta;
 						fileName = metaFilename;
 						//System.out.println("Write to: meta   - scope not null");
 					}
 				} else {
 					document = documentMeta;
-					goobi = goobiMeta;
+					goobiElements = goobiMeta;
 					fileName = metaFilename;
 					//System.out.println("Write to: meta   - scope is null");
 				}
 
-				if (document != null && goobi != null) {
+				if (document != null && goobiElements != null && !goobiElements.isEmpty()) {
 
 					Element newGoobiElement = null;
 
 					if (fieldType.equals("person")) {
 						newGoobiElement = document.createElement("goobi:metadata");
-						
+
 						newGoobiElement.setAttribute("name", goobiField.getName());
 						newGoobiElement.setAttribute("type", goobiField.getType());
 
@@ -123,13 +131,15 @@ public class WriteToFile {
 						newGoobiElement.setAttribute("name", goobiField.getName());
 						newGoobiElement.setTextContent(goobiField.getValues().get("content"));
 					}
-					
+
 
 					if (newGoobiElement != null) {
-						goobi.appendChild(newGoobiElement);
+						for (Element goobiElement : goobiElements) {
+							goobiElement.appendChild(newGoobiElement);
+						}
 					}
-					
-					
+
+
 					DOMSource source = new DOMSource(document);
 
 					TransformerFactory transformerFactory = TransformerFactory.newInstance();
@@ -155,7 +165,7 @@ public class WriteToFile {
 
 	}
 
-	
+
 
 	private boolean fileExists(String fileName) {
 		File file = new File(fileName);
@@ -163,26 +173,28 @@ public class WriteToFile {
 	}
 
 
-	private Element getElementForInsertion(Document document) {		
+	private List<Element> getElementsForInsertion(Document document, List<String> dmdLogIds) {		
 
 		Element root = document.getDocumentElement();
-		Element goobi = null;
+		List<Element> goobiElements = new ArrayList<Element>();
 		NodeList dmdSecs = root.getElementsByTagName("mets:dmdSec");
 		if (dmdSecs.getLength() > 0) {
 			for (int i = 0; i < dmdSecs.getLength(); i++) {
 				if (dmdSecs.item(i).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE ) {
 					Element dmdSec = (Element)dmdSecs.item(i);
 
-					// Find out if we are in the right section. We need do append our values to the "goobi:goobi" section
+					// Find out if we are in the right section. We need to append our values to the "goobi:goobi" section
 					// that resides in the "mets:dmdSec" section with the attribute 'ID="DMDLOG_1234"'.
-					if (dmdSec.getAttribute("ID").contains("DMDLOG")) {
+					for (String dmdLogId : dmdLogIds) {
+						if (dmdSec.getAttribute("ID").equals(dmdLogId)) {
 
-						// Get the "goobi:goobi" node
-						NodeList goobiNodes = dmdSec.getElementsByTagName("goobi:goobi");
-						if (goobiNodes.getLength() > 0) {
-							for (int j = 0; j < goobiNodes.getLength(); j++) {
-								if (goobiNodes.item(j).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE ) {
-									goobi = (Element)goobiNodes.item(j);
+							// Get the "goobi:goobi" node
+							NodeList goobiNodes = dmdSec.getElementsByTagName("goobi:goobi");
+							if (goobiNodes.getLength() > 0) {
+								for (int j = 0; j < goobiNodes.getLength(); j++) {
+									if (goobiNodes.item(j).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE ) {
+										goobiElements.add((Element)goobiNodes.item(j));
+									}
 								}
 							}
 						}
@@ -191,7 +203,7 @@ public class WriteToFile {
 			}
 		}
 
-		return goobi;
+		return goobiElements;
 	}
 
 
@@ -252,7 +264,7 @@ public class WriteToFile {
 			File newBackupFile = new File(productiveFile.getAbsoluteFile()+".1");
 			FileUtils.copyFile(productiveFile, newBackupFile);
 		}
-		
+
 		// Remove all files with a suffix bigger than 9, because Goobi keeps only max. 9 backup files:
 		for (File backupFileHigher9 : FileUtils.listFiles(backupDirectory, new RegexFileFilter("meta.*\\.xml(\\.\\d{2,})") , TrueFileFilter.INSTANCE)) {
 			backupFileHigher9.delete();

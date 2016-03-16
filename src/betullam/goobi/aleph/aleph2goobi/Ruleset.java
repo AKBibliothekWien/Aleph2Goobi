@@ -29,7 +29,7 @@ public class Ruleset {
 	private Document rulesetDoc = null;
 	private String rulesetFilePath = null;
 	private String metaFilePath = null;
-	
+
 
 	protected Ruleset(String metaFilePath, String rulesetFilePath) {
 		this.metaFilePath = metaFilePath;
@@ -74,7 +74,7 @@ public class Ruleset {
 		}
 		return database;
 	}
-	
+
 	public String getIdRegex() {
 		String idRegex = null;
 		try {
@@ -116,11 +116,19 @@ public class Ruleset {
 
 							String type = (mapElement.hasAttribute("type")) ? mapElement.getAttribute("type") : "default";
 							String scope = (mapElement.hasAttribute("scope")) ? mapElement.getAttribute("scope") : null;
-							String targetDocstrct = (mapElement.hasAttribute("docstrcttype")) ? mapElement.getAttribute("docstrcttype") : null;
+							String targetDocstrctCommaSeparated = (mapElement.hasAttribute("docstrcttype")) ? mapElement.getAttribute("docstrcttype") : null;
+							List<String> targetDocstrcts = (targetDocstrctCommaSeparated != null) ? Arrays.asList(targetDocstrctCommaSeparated.split("\\s*,\\s*")): null;
+
+							// Check for targetDocstrcts. Stop if they are missing.
+							// It would be too dangerous to write metadata to ALL DocStruct-Elements.
+							if (targetDocstrcts == null) {
+								System.err.println("Der Parameter \"docstrcttype\" fehlt im \"Map\" Element (siehe Bereich \"Aleph\" in der ruleset Datei). The parameter \"docstrcttype\" is missing in the \"Map\" element (see section \"Aleph\" in ruleset file).");
+								System.exit(1);
+							}
 
 							String mabFields = null;
 							List<String> lstMabFields = null;
-							String goobiField = null;
+							String goobiMdField = null;
 							String condSubfield = null;
 							String condContains = null;
 							String condContainsNot = null;
@@ -142,7 +150,7 @@ public class Ruleset {
 										}
 
 										if (nodeName.equals("Goobi")) {
-											goobiField = (mapChildElement != null) ? mapChildElement.getAttribute("field") : null;
+											goobiMdField = (mapChildElement != null) ? mapChildElement.getAttribute("field") : null;
 											//System.out.println("goobiField: " + goobiField);
 										}
 
@@ -157,30 +165,29 @@ public class Ruleset {
 
 										if (nodeName.equals("Regex")) {
 											regex = (mapChildElement != null) ? mapChildElement.getAttribute("match") : null;
-											//System.out.println("goobiField: " + goobiField);
+											//System.out.println("regex: " + regex);
 										}										
 									}
 								}
 							}
 
 
-							// Add rule to the list of rules, but only if the metadata field is officially defined in MetadataType section of ruleset.xml
-							// and if it is an allowed metadata of the parent DocStrctType:
-							String realDocstrct = getParentDocStruct(scope);
-							
-							//System.out.println("targetDocstrct: " + targetDocstrct + "; realDocstrct: " + realDocstrct);
-							List<String> targetDocstrcts = (targetDocstrct != null) ? Arrays.asList(targetDocstrct.split("\\s*,\\s*")): null;
-							boolean matchingDocstrcts = false;
-							if (targetDocstrcts != null) {
-								matchingDocstrcts = targetDocstrcts.contains(realDocstrct);
-								//System.out.println(targetDocstrct + " contains " + realDocstrct + ": " + matchingDocstrcts);
-							} else {
-								matchingDocstrcts = true;
-								//System.out.println("targetDocstrct is " + targetDocstrct + " (" + matchingDocstrcts + ")");
-							}
-							
-							if (goobiFieldExists(this.rulesetDoc, goobiField) && goobiFieldAllowedInParent(this.rulesetDoc, goobiField, realDocstrct) && matchingDocstrcts) {
-								rules.add(new Rule(type, scope, targetDocstrct, lstMabFields, goobiField, condSubfield, condContains, condContainsNot, condMissing, regex));
+							for (String targetDocstrct : targetDocstrcts) {
+								boolean goobiFieldAllowedInParent = goobiMdAllowedInDocstruct(this.rulesetDoc, goobiMdField, targetDocstrct);
+								boolean goobiFieldExists = goobiFieldExists(this.rulesetDoc, goobiMdField);
+								//System.out.println(goobiMdField + " exists: " + goobiFieldExists);
+								//System.out.println(goobiMdField + " allowed in " + targetDocstrct + ": " + goobiFieldAllowedInParent);
+
+								// Add rule to the list of rules, but only if the metadata field is officially defined in MetadataType section of ruleset.xml
+								// and if it is an allowed metadata of the parent DocStrctType:
+								if (goobiFieldExists && goobiFieldAllowedInParent) {
+									List<String> dmdLogIds = getDmdLogIds(scope, targetDocstrct);
+									boolean docStructExists = (dmdLogIds == null || dmdLogIds.isEmpty()) ? false : true;
+
+									if (docStructExists) {
+										rules.add(new Rule(type, scope, targetDocstrct, dmdLogIds, lstMabFields, goobiMdField, condSubfield, condContains, condContainsNot, condMissing, regex));
+									}
+								}
 							}
 						}
 					}
@@ -195,12 +202,12 @@ public class Ruleset {
 	}
 
 
-	
-	private String getParentDocStruct(String scope) {
 
-		String parentDocStruct = null;
+	private List<String> getDmdLogIds(String scope, String docstrcttype) {
+		List<String> dmdLogIds = new ArrayList<String>();
+
 		String fileName = null;
-
+		
 		if (scope != null) {
 			if (scope.equals("topstruct")) {
 				fileName = this.metaFilePath + "/meta_anchor.xml";
@@ -213,34 +220,39 @@ public class Ruleset {
 
 		File metaFile = new File(fileName);
 
+		// Fallback, e. g. if "topstruct" is used for a Monograph
+		// Attention: Could cause problems if we have a Journal but are missing the meta_anchor.xml file!
+		if (!metaFile.exists()) {
+			fileName = this.metaFilePath + "/meta.xml";
+			metaFile = new File(fileName);
+		}
+		
 		if (metaFile.exists()) {
 			try {
-				
 				DocumentBuilderFactory documentBuilderFactory = DocumentBuilderFactory.newInstance();
 				DocumentBuilder documentBuilder = documentBuilderFactory.newDocumentBuilder();
 				Document document = documentBuilder.parse(fileName);
 
-				String dmdSecId = xmlParser.getAttributeValue(document, "/mets/dmdSec", "ID");
+				// Get all DMDLOG_IDs for all structure types that the user wants
+				dmdLogIds = xmlParser.getAttributeValues(document, "/mets/structMap[@TYPE='LOGICAL']//div[@TYPE='"+docstrcttype+"']", "DMDID");
 
-				if (dmdSecId != null) {
-					parentDocStruct = xmlParser.getAttributeValue(document, "/mets/structMap[@TYPE='LOGICAL']//div[@DMDID='"+dmdSecId+"']", "TYPE");
-				}
-			} catch (XPathExpressionException e) {
+			} catch (ParserConfigurationException e) {
 				e.printStackTrace();
 			} catch (SAXException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
-			} catch (ParserConfigurationException e) {
+			} catch (XPathExpressionException e) {
 				e.printStackTrace();
-			}
+			}	
 		}
 
-		return parentDocStruct;
+		return dmdLogIds;
 	}
 
-	
-	private boolean goobiFieldAllowedInParent(Document document, String goobiField, String parentGoobiField) {
+
+
+	private boolean goobiMdAllowedInDocstruct(Document document, String goobiField, String parentGoobiField) {		
 
 		boolean goobiFieldAllowedInParent = false;
 
@@ -256,7 +268,7 @@ public class Ruleset {
 					if (nameNodes.item(i).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE ) {
 						// Name Element
 						Element nameElement = (Element)nameNodes.item(i);
-						String docStrctName = nameElement.getTextContent();
+						String docStrctName = nameElement.getTextContent().trim();
 						if (docStrctName.equals(parentGoobiField)) {
 							docStrctTypeNode = nameElement.getParentNode();
 						}
@@ -271,7 +283,7 @@ public class Ruleset {
 						if (childNodes.item(i).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE ) {
 							Element childElement = (Element)childNodes.item(i);
 							if (childElement.getTagName().equals("metadata")) {
-								if (childElement.getTextContent().equals(goobiField)) {
+								if (childElement.getTextContent().trim().equals(goobiField)) {
 									goobiFieldAllowedInParent = true;
 									return goobiFieldAllowedInParent;
 								}
