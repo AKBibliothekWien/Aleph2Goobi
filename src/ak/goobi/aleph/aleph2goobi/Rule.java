@@ -1,4 +1,4 @@
-package betullam.goobi.aleph.aleph2goobi;
+package ak.goobi.aleph.aleph2goobi;
 
 import java.util.ArrayList;
 import java.util.List;
