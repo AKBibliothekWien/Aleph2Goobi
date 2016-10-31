@@ -21,7 +21,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import betullam.xmlhelper.XmlParser;
+import ak.xmlhelper.XmlParser;
 
 public class Ruleset {
 

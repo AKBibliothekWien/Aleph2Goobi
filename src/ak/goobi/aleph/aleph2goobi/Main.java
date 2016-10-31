@@ -20,7 +20,7 @@ import javax.xml.xpath.XPathExpressionException;
 import org.w3c.dom.Document;
 import org.xml.sax.SAXException;
 
-import betullam.xmlhelper.XmlParser;
+import ak.xmlhelper.XmlParser;
 
 // TODO: Check for exact duplicate entries in meta.xml and meta_anchor.xml
 // TODO: Add some success or error messages for usability reasons
